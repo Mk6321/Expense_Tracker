@@ -8,18 +8,45 @@
 | API      | https://expense-tracker-api-n5um.onrender.com      | Render, `srv-daej41gu01pc73emvuug`, Singapore, free |
 | Database | Supabase `nphbfmslcgktuzkcwqnm`                    | Postgres 17.6, ap-south-1 |
 
-Two manual steps are left, both needing a browser:
+## Auto-deploy on push
 
-1. **Connect Vercel to GitHub** so pushes deploy automatically. Vercel's GitHub
-   App is not installed on the account, and the CLI cannot install it. Project
-   Settings -> Git -> Connect, pick `Mk6321/Expense_Tracker`, and set **Root
-   Directory = `frontend`**. Until then, deploy with
-   `cd frontend && vercel --prod`.
-2. **Rotate the database password.** The current one has been pasted into a chat.
-   Supabase -> Settings -> Database -> Reset password, then update it in
-   `backend/.env` and in the two Render environment variables.
+Tested by pushing, not assumed:
 
-Render already auto-deploys on push to `main`.
+| Platform    | Auto-deploys on push to `main`? |
+| ----------- | ------------------------------- |
+| **Vercel**  | **Yes.** Git-connected, root directory `frontend`, production branch `main`. |
+| **Render**  | **No, not yet.** See below.     |
+
+Render's service has `autoDeploy: yes` and the right repo and branch, but it does
+not react to pushes — a backend commit sat unbuilt for ten minutes while Vercel
+shipped the same push in under a minute.
+
+The reason is that the service was created through Render's **API** with a public
+repo URL. Render can clone a public repo without any GitHub authorisation, but it
+only learns that a push happened via a **webhook**, and the webhook only exists if
+Render's GitHub App is installed on the account. It is not. So `autoDeploy` is on
+and has nothing to listen to.
+
+**To fix (one browser visit):** Render dashboard → the `expense-tracker-api`
+service → Settings → Build & Deploy → connect the GitHub repository. That
+installs the app and registers the webhook. Pushes will deploy from then on.
+
+Until then, deploy the backend with a manual deploy from the dashboard, or:
+
+```bash
+curl -X POST "https://api.render.com/v1/services/<service-id>/deploys"   -H "Authorization: Bearer $RENDER_API_KEY"   -H "Content-Type: application/json"   -d '{"clearCache":"do_not_clear"}'
+```
+
+Note that once connected, Render only rebuilds when files under its root
+directory (`backend/`) change — a docs-only or frontend-only commit will
+correctly be ignored.
+
+## Still to do
+
+**Rotate the database password.** The current one has been pasted into a chat.
+Supabase → Settings → Database → Reset password, then update it in
+`backend/.env` and in both `DATABASE_URL` and `DATABASE_URL_MIGRATIONS` on
+Render.
 
 ---
 
