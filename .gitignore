@@ -30,3 +30,6 @@ Thumbs.db
 # Local db
 *.sqlite3
 *.db
+
+# Local dev database
+backend/dev.db

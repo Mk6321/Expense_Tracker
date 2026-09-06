@@ -1,0 +1,124 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #root {
+    @apply h-full;
+  }
+
+  body {
+    @apply bg-void-900 font-sans text-slate-200 antialiased;
+    /* Two faint colour wells behind everything, so flat panels never look grey. */
+    background-image:
+      radial-gradient(60rem 40rem at 12% -10%, rgba(168, 85, 247, 0.13), transparent 60%),
+      radial-gradient(50rem 36rem at 92% 8%, rgba(34, 211, 238, 0.11), transparent 60%);
+    background-attachment: fixed;
+  }
+
+  /* Money is read in columns -- digits must not jitter between values. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    @apply font-mono tracking-tight;
+  }
+
+  ::selection {
+    @apply bg-neon-violet/30 text-white;
+  }
+
+  ::-webkit-scrollbar {
+    @apply h-2 w-2;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-white/10;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-white/20;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-neon-cyan/70 ring-offset-2 ring-offset-void-900;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply rounded-2xl border border-white/[.07] bg-white/[.03] shadow-card backdrop-blur-xl;
+  }
+
+  .glass-hover {
+    @apply transition-all duration-300 hover:border-white/[.14] hover:bg-white/[.055];
+  }
+
+  .neon-text-cyan {
+    color: #67e8f9;
+    text-shadow: 0 0 18px rgba(34, 211, 238, 0.55);
+  }
+  .neon-text-violet {
+    color: #d8b4fe;
+    text-shadow: 0 0 18px rgba(168, 85, 247, 0.55);
+  }
+
+  .label {
+    @apply text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500;
+  }
+
+  .input {
+    @apply w-full rounded-xl border border-white/10 bg-void-800/70 px-3.5 py-2.5 text-sm
+           text-slate-100 placeholder:text-slate-600 transition
+           focus:border-neon-cyan/50 focus:bg-void-800 focus:shadow-glow-cyan focus:outline-none;
+  }
+
+  .btn {
+    @apply inline-flex select-none items-center justify-center gap-2 rounded-xl px-4 py-2.5
+           text-sm font-semibold transition-all duration-200
+           disabled:pointer-events-none disabled:opacity-40;
+  }
+
+  .btn-primary {
+    @apply btn text-void-900;
+    background: linear-gradient(135deg, #67e8f9, #a855f7);
+    box-shadow: 0 0 24px -6px rgba(103, 232, 249, 0.7);
+  }
+  .btn-primary:hover {
+    box-shadow: 0 0 34px -4px rgba(168, 85, 247, 0.85);
+  }
+
+  .btn-ghost {
+    @apply btn border border-white/10 bg-white/[.03] text-slate-300
+           hover:border-white/20 hover:bg-white/[.07] hover:text-white;
+  }
+
+  .btn-danger {
+    @apply btn border border-debit/30 bg-debit/10 text-debit hover:bg-debit/20;
+  }
+
+  /* Sweeping highlight used on skeletons and the cold-start banner. */
+  .shimmer::after {
+    content: "";
+    @apply absolute inset-0 animate-shimmer;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.07),
+      transparent
+    );
+    transform: translateX(-100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

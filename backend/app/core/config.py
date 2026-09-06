@@ -1,6 +1,5 @@
 from functools import lru_cache
 
-from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -30,8 +29,10 @@ class Settings(BaseSettings):
     COOKIE_SAMESITE: str = "none"
     COOKIE_DOMAIN: str | None = None
 
-    # CORS
-    CORS_ORIGINS: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
+    # CORS. Kept as a raw string: pydantic-settings tries to JSON-decode any list
+    # field coming from a dotenv/env source before validators run, so a plain
+    # comma-separated value (what Render and .env actually carry) would explode.
+    CORS_ORIGINS: str = "http://localhost:5173"
 
     # Domain config
     INVITE_CODE_EXPIRE_DAYS: int = 7
@@ -42,12 +43,14 @@ class Settings(BaseSettings):
 
     ENVIRONMENT: str = "development"
 
-    @field_validator("CORS_ORIGINS", mode="before")
-    @classmethod
-    def _split_origins(cls, v: object) -> object:
-        if isinstance(v, str):
-            return [o.strip() for o in v.split(",") if o.strip()]
-        return v
+    @property
+    def cors_origins(self) -> list[str]:
+        raw = self.CORS_ORIGINS.strip()
+        if raw.startswith("["):  # tolerate a JSON array too
+            import json
+
+            return [str(origin) for origin in json.loads(raw)]
+        return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
     @property
     def migration_database_url(self) -> str:
