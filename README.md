@@ -75,6 +75,11 @@ frontend/src/
   lib/           api client, query hooks, decimal helpers
 ```
 
+> **Want the full picture?** [HOW_IT_WORKS.md](HOW_IT_WORKS.md) walks through
+> every calculation with worked arithmetic from the real demo group — how splits
+> round, how balances are derived, how the settlement plan is built, and how
+> groups, invites and categories come into existence.
+
 ### The decisions that matter
 
 **Money is never a float.** `NUMERIC(12,2)` in Postgres, `Decimal` in Python,
