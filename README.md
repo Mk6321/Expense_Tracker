@@ -121,19 +121,25 @@ switch between them.
 
 ## Deploying
 
-| Piece    | Host     | Notes                                                        |
-| -------- | -------- | ------------------------------------------------------------ |
-| Frontend | Vercel   | Root `frontend`, set `VITE_API_BASE_URL` to the Render URL   |
-| Backend  | Render   | `render.yaml` blueprint, root `backend`                       |
-| Database | Supabase | Pooled URL (6543) for the app, direct URL (5432) for Alembic |
+Step by step in **[DEPLOYMENT.md](DEPLOYMENT.md)**. The short version:
 
-Three things that will bite you otherwise:
+| Piece    | Host     | Notes                                                       |
+| -------- | -------- | ----------------------------------------------------------- |
+| Frontend | Vercel   | `vercel.json` at the root; set `VITE_API_BASE_URL`          |
+| Backend  | Render   | `render.yaml` blueprint, root `backend`                     |
+| Database | Supabase | Transaction pooler (6543) for the app, session (5432) for Alembic |
 
-- Alembic needs the **direct** connection (port 5432). pgbouncer in transaction
-  mode cannot run migrations reliably — hence the separate
+The thing that will cost you an afternoon otherwise: Supabase's **direct**
+connection host (`db.<ref>.supabase.co`) resolves to **IPv6 only**, and Render's
+free tier has no IPv6 outbound. Use the pooler hosts, which are IPv4 — and note
+their username is `postgres.<project-ref>`, not `postgres`.
+
+Also:
+
+- Alembic needs the **session** pooler (5432). Transaction mode gives a
+  different backend per statement, which breaks DDL — hence the separate
   `DATABASE_URL_MIGRATIONS`.
-- Keep the SQLAlchemy pool small (3–5). Supabase's free tier has a low
-  connection cap and a bigger pool will exhaust it.
+- Keep the SQLAlchemy pool small (3–5); Supabase's free tier caps connections.
 - Vercel and Render are different origins, so the refresh cookie needs
   `SameSite=None; Secure` and CORS needs `allow_credentials=True` with an
   explicit origin list — never `*`.

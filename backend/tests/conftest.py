@@ -6,11 +6,16 @@ from decimal import Decimal
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 # Point at a real Postgres with TEST_DATABASE_URL to exercise NUMERIC/JSONB for real;
 # the default keeps the suite runnable offline and still exact (see money_type.py).
 TEST_DB_URL = os.getenv("TEST_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+# When pointing at a shared Postgres, confine the whole run to its own schema so
+# the suite's drop_all can never reach a real one.
+TEST_DB_SCHEMA = os.getenv("TEST_DB_SCHEMA")
 os.environ.setdefault("DATABASE_URL", TEST_DB_URL)
 os.environ.setdefault("JWT_SECRET", "test-secret-not-used-anywhere-real")
 os.environ.setdefault("COOKIE_SECURE", "false")
@@ -22,15 +27,49 @@ from app.models import Base  # noqa: E402
 from app.repositories import category_repo  # noqa: E402
 
 
+def _engine_kwargs() -> dict:
+    kwargs: dict = {"future": True}
+    if TEST_DB_URL.startswith("postgresql"):
+        # pgbouncer cannot do server-side prepared statements.
+        connect_args: dict = {"statement_cache_size": 0, "prepared_statement_cache_size": 0}
+        if TEST_DB_SCHEMA:
+            connect_args["server_settings"] = {"search_path": TEST_DB_SCHEMA}
+        kwargs["connect_args"] = connect_args
+        kwargs["poolclass"] = NullPool
+    return kwargs
+
+
+_IS_POSTGRES = TEST_DB_URL.startswith("postgresql")
+
+
 @pytest_asyncio.fixture
 async def db_engine():
-    engine = create_async_engine(TEST_DB_URL, future=True)
+    """A clean database per test.
+
+    On SQLite the engine is a fresh in-memory database each time, so creating the
+    tables is enough. On Postgres the schema is created once and then TRUNCATEd
+    between tests: rebuilding ~45 objects per test turned a 20-second suite into a
+    20-minute one over a remote connection, and the churn made the pooler drop
+    connections mid-test.
+    """
+    engine = create_async_engine(TEST_DB_URL, **_engine_kwargs())
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(Base.metadata.create_all)
+        if TEST_DB_SCHEMA:
+            await conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS "{TEST_DB_SCHEMA}"'))
+        await conn.run_sync(Base.metadata.create_all)  # checkfirst, so a no-op later
+
+        if _IS_POSTGRES:
+            qualified = ", ".join(
+                f'"{TEST_DB_SCHEMA}"."{table.name}"' if TEST_DB_SCHEMA else f'"{table.name}"'
+                for table in Base.metadata.sorted_tables
+            )
+            await conn.execute(text(f"TRUNCATE {qualified} RESTART IDENTITY CASCADE"))
+
     yield engine
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+
+    if not _IS_POSTGRES:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
     await engine.dispose()
 
 
