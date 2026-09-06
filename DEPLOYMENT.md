@@ -1,7 +1,32 @@
 # Deploying
 
+**Live now:**
+
+| Piece    | URL                                                | Notes                     |
+| -------- | -------------------------------------------------- | ------------------------- |
+| App      | https://expense-tracker-mk6321.vercel.app          | Vercel, project `expense-tracker` |
+| API      | https://expense-tracker-api-n5um.onrender.com      | Render, `srv-daej41gu01pc73emvuug`, Singapore, free |
+| Database | Supabase `nphbfmslcgktuzkcwqnm`                    | Postgres 17.6, ap-south-1 |
+
+Two manual steps are left, both needing a browser:
+
+1. **Connect Vercel to GitHub** so pushes deploy automatically. Vercel's GitHub
+   App is not installed on the account, and the CLI cannot install it. Project
+   Settings -> Git -> Connect, pick `Mk6321/Expense_Tracker`, and set **Root
+   Directory = `frontend`**. Until then, deploy with
+   `cd frontend && vercel --prod`.
+2. **Rotate the database password.** The current one has been pasted into a chat.
+   Supabase -> Settings -> Database -> Reset password, then update it in
+   `backend/.env` and in the two Render environment variables.
+
+Render already auto-deploys on push to `main`.
+
+---
+
+## Setting it up from scratch
+
 Three services: Supabase (database), Render (API), Vercel (frontend). Do them in
-that order — Render needs the database URL, and Vercel needs the Render URL.
+that order -- Render needs the database URL, and Vercel needs the Render URL.
 
 ---
 
@@ -75,8 +100,14 @@ frontend says so explicitly on a slow first load rather than spinning silently.
 
 ## 3. Vercel (frontend)
 
-Add New → Project → import the same repo. `vercel.json` at the root sets the
-build, so leave the framework preset alone.
+Add New → Project → import the same repo, and set **Root Directory** to
+`frontend` — `frontend/vercel.json` handles the rest. (The config lives there
+rather than at the repo root because Vercel's CLI otherwise auto-detects the
+FastAPI backend as a second service and refuses to build.)
+
+New projects get **Deployment Protection** on by default, which puts the whole
+site behind a Vercel login. Turn it off under Settings → Deployment Protection,
+or the app is private to your team.
 
 One environment variable:
 

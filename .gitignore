@@ -33,3 +33,6 @@ Thumbs.db
 
 # Local dev database
 backend/dev.db
+
+# Vercel CLI
+.vercel
