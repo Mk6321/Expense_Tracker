@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -7,6 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.v1 import (
@@ -98,7 +100,30 @@ async def unhandled_handler(request: Request, exc: Exception) -> JSONResponse:
 
 @app.get("/health", tags=["meta"])
 async def health() -> dict:
-    return {"success": True, "data": {"status": "ok"}, "message": None}
+    """Liveness plus a real database round-trip.
+
+    Always returns 200 so a cold pooler connection cannot flap the platform's
+    health gate and take a working instance out of rotation -- the database state
+    is reported in the body instead, where a human or an uptime check can see it.
+    """
+    async def ping() -> None:
+        async with SessionLocal() as db:
+            await db.execute(text("SELECT 1"))
+
+    database = "ok"
+    try:
+        # wait_for rather than asyncio.timeout -- the latter is 3.11+, and local
+        # development runs on 3.10.
+        await asyncio.wait_for(ping(), timeout=5)
+    except Exception:
+        logger.exception("Health check could not reach the database")
+        database = "unreachable"
+
+    return {
+        "success": True,
+        "data": {"status": "ok", "database": database},
+        "message": None,
+    }
 
 
 API_PREFIX = "/api/v1"
