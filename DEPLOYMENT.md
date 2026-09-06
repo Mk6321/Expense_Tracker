@@ -34,7 +34,10 @@ installs the app and registers the webhook. Pushes will deploy from then on.
 Until then, deploy the backend with a manual deploy from the dashboard, or:
 
 ```bash
-curl -X POST "https://api.render.com/v1/services/<service-id>/deploys"   -H "Authorization: Bearer $RENDER_API_KEY"   -H "Content-Type: application/json"   -d '{"clearCache":"do_not_clear"}'
+curl -X POST "https://api.render.com/v1/services/<service-id>/deploys" \
+  -H "Authorization: Bearer $RENDER_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"clearCache":"do_not_clear"}'
 ```
 
 Note that once connected, Render only rebuilds when files under its root
